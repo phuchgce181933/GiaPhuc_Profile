@@ -1,0 +1,33 @@
+# OS / editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env files at any depth (defense-in-depth — backend & frontend also ignore .env)
+.env
+.env.local
+.env.*.local
+
+# Build artefacts (root + nested)
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Node
+node_modules/
+.pnp/
+.pnp.js
