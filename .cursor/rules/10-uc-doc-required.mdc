@@ -1,0 +1,49 @@
+---
+description: Khi sửa file examples/UC-XX/ — đọc README + notes + UML trước, tuân rule 03 HARD RULE
+globs: .ai/skills/software-engineering/examples/UC-*/**
+alwaysApply: false
+---
+
+# UC Doc Required — Đọc Trước Khi Sửa UC
+
+## Khi chạm bất kỳ file nào trong `.ai/skills/software-engineering/examples/UC-XX/`
+
+### BẮT BUỘC theo thứ tự:
+
+1. **`examples/UC-XX/README.md`** (under `.ai/skills/software-engineering/`) — developer-facing doc (13 sections)
+   - Đọc hết §1–§13 trước khi chạm code
+   - Đặc biệt chú ý §5 (API), §7 (Main Flow), §9 (Business Rules)
+
+2. **`examples/UC-XX/notes.md`** (under `.ai/skills/software-engineering/`) — maintenance metadata
+   - Change-impact matrix (12 rows)
+   - Drift observations
+   - Validation checklist
+
+3. **`docs/plantuml/SD-XX-*.puml`** và **`docs/plantuml/CD-XX-*.puml`** (in target project's docs/)
+   - Kiểm tra diagram hiện có trước khi edit
+
+## HARD RULE: 1 UC = 1 CD + 1 SD
+
+- Mỗi UC có **đúng 1** Class Diagram và **đúng 1** Sequence Diagram
+- File: `CD-XX-<Name>.puml` và `SD-XX-<Name>.puml` (placed in `docs/plantuml/` of target project)
+- **Không gộp nhiều UC vào 1 diagram**
+- Reference: `.ai/skills/software-engineering/rules/03-use-case.md`
+
+## UC ↔ Diagram Mapping (8 UCs)
+
+| UC | CD | SD |
+| -- | -- | -- |
+| UC-01 | CD-01-Create-Staff | SD-01-Create-Staff |
+| UC-02 | CD-02-View-Staff-Profile | SD-02-View-Staff-Profile |
+| UC-03 | CD-03-Update-Staff-Profile | SD-03-Update-Staff-Profile |
+| UC-04 | CD-04-Assign-Role | SD-04-Assign-Role |
+| UC-05 | CD-05-Activate-Deactivate | SD-05-Activate-Deactivate |
+| UC-06 | CD-06-Email-Notification | SD-06-Email-Notification |
+| UC-07 | CD-07-Check-Profile-Permission | SD-07-Check-Profile-Permission |
+| UC-08 | CD-08-View-Own-Profile | SD-08-View-Own-Profile |
+
+## Đừng làm gì?
+
+- **Không** edit code mà không đọc §7 (Main Flow) trước
+- **Không** sửa diagram mà không đọc `.ai/skills/software-engineering/rules/03-use-case.md` trước
+- **Không** thêm endpoint/permission mới không có trong UC body

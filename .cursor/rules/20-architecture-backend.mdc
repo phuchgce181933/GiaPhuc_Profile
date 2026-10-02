@@ -1,0 +1,50 @@
+---
+description: Layered architecture pattern — Router→Middleware→Controller→Service→Repository→Model
+globs: backend/src/**/*.js
+alwaysApply: false
+---
+
+# Architecture Pattern — Backend
+
+## Layered Pattern (default, không phải luật cứng)
+
+```
+Router → Middleware → Controller → Service → Repository → Model
+```
+
+Chỉ include participants thực sự tham gia. Không bắt buộc đủ 6 lớp.
+
+## Đọc trước khi code
+
+1. `.ai/skills/software-engineering/rules/02-architecture.md` — layered pattern chi tiết
+2. Một existing file cùng module để copy pattern:
+   - `backend/src/modules/staff/staff.service.js`
+   - `backend/src/modules/staff/staff.controller.js`
+
+## Các lớp backend
+
+| Layer | Đặc điểm |
+| ----- | -------- |
+| **Router** | mount routes, gọi middleware stack, delegate sang controller |
+| **Middleware** | auth, permission, validation, error handler — optional |
+| **Controller** | parse request, call service, format response |
+| **Service** | business logic, transaction, orchestration |
+| **Repository** | data access, query, `findById`, `create`, `update` |
+| **Model** | schema, indexes, virtuals |
+
+## Middleware — Chỉ khi đã đăng ký
+
+- **Quan trọng**: middleware phải được `app.use()` hoặc route-level registered
+- Nếu middleware chưa đăng ký → **không thêm vào SD**
+- Reference: `.ai/skills/software-engineering/rules/02-architecture.md` §3
+
+## Validation
+
+- Dùng `staff.validator.js` — đừng validate trong controller
+- Reference: `.ai/skills/software-engineering/rules/02-architecture.md` §4
+
+## KHÔNG LÀM
+
+- **Không** tạo service mà không có repository (nếu có DB access)
+- **Không** gọi DB trực tiếp từ controller/service (đi qua repository)
+- **Không** thêm middleware chưa đăng ký vào SD

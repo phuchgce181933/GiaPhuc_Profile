@@ -1,0 +1,44 @@
+---
+description: Layered architecture pattern — Router→Context→API→Page→Component
+globs: frontend/src/**/*.jsx
+alwaysApply: false
+---
+
+# Architecture Pattern — Frontend
+
+## Layered Pattern (default)
+
+```
+Page → Hook → API (axios) → Backend
+```
+
+Chỉ include layers thực sự tham gia.
+
+## Đọc trước khi code
+
+1. `.ai/skills/software-engineering/rules/02-architecture.md` — layered pattern chi tiết
+2. Existing files để copy pattern:
+   - `frontend/src/pages/StaffListPage.jsx`
+   - `frontend/src/api/staff.api.js`
+   - `frontend/src/hooks/usePermission.js`
+
+## Các lớp frontend
+
+| Layer | Đặc điểm |
+| ----- | -------- |
+| **Page** | render, state, event handlers, gọi hook |
+| **Hook** | logic tái sử dụng, call API, cache |
+| **API** | axios instance, typed endpoints |
+| **Context** | auth state, global |
+
+## API Pattern
+
+- Mỗi module có 1 file `*.api.js`
+- Dùng `axios.js` base instance
+- Response: unwrap data, throw on error
+
+## KHÔNG LÀM
+
+- **Không** gọi `fetch`/`axios` trực tiếp trong Page
+- **Không** viết business logic trong Page (đưa vào hook)
+- **Không** thêm endpoint mới không có trong `docs/UC/UC-PACKAGE.md`

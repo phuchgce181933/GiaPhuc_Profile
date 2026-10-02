@@ -1,0 +1,53 @@
+---
+description: Nghiêm cấm bịa class/endpoint/permission — luôn reference source of truth
+globs: backend/src/**/* frontend/src/**/*
+alwaysApply: false
+---
+
+# No-Invent Rule — Không Bịa Architecture
+
+## Quy tắc vàng
+
+**Tuyệt đối không** tạo class, endpoint, permission, field, method mới không có trong source-of-truth.
+
+## Source-of-truth stack (ĐỒNG BỘ với `.ai/skills/software-engineering/rules/01-source-of-truth.md`)
+
+```
+1. User requirement (explicit, verbatim)        ← HIGHEST
+2. Source code: backend/src/**, frontend/src/**
+3. Tests: backend/tests/**
+4. API implementation: router → controller → service
+5. Model / repository implementation
+6. docs/UC/UC-PACKAGE.md
+7. docs/plantuml/CD-*.puml
+8. docs/plantuml/SD-*.puml
+9. README / docs/DOC-GUIDE.md / skill rules
+10. AI assumption ← luôn re-check, KÉM ưu tiên nhất
+```
+
+> **Lưu ý quan trọng**: Source code **LUÔN THẮNG** UC-PACKAGE. Nếu code và
+> UC doc mâu thuẫn → báo cáo DRIFT, **không tự ý pick winner** (xem
+> `rules/01-source-of-truth.md`).
+
+## Đừng làm
+
+- **Không** tạo endpoint `/api/v1/...` không có trong UC-PACKAGE
+- **Không** tạo method `Service.doSomething()` không có trong SD
+- **Không** tạo permission `PERM_XXX` không có trong `backend/src/constants/permissions.js`
+- **Không** tạo field model không có trong CD
+- **Không** sửa code để "khớp" UC-PACKAGE cũ khi user yêu cầu ngược lại — user requirement > doc
+
+## Khi cần thêm cái mới
+
+1. Phase A → xác định rõ cần gì
+2. Phase B → matrix → change type
+3. Phase E → cập nhật UC-PACKAGE trước
+4. **Sau đó** mới code
+
+## Câu magic
+
+Trước khi tạo bất kỳ cái gì mới, hỏi:
+
+> "Cái này có trong `docs/UC/UC-PACKAGE.md` không? Có trong SD/CD đã approve không?"
+
+Nếu không → **dừng lại, report, đợi user xác nhận**.

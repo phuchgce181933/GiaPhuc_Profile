@@ -1,0 +1,48 @@
+@startuml CD-XX-<Name>
+
+' ============================================================
+' Class Diagram — <Name>
+' Feature: <Admin Staff Account Management / RBAC / ...>
+' UC: UC-XX
+' ============================================================
+
+!pragma useStickyOnly true
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam padding 3
+skinparam nodesep 60
+skinparam ranksep 50
+skinparam linetype ortho
+
+skinparam class {
+    BackgroundColor #FFFFFF
+    BorderColor #000000
+    ArrowColor #000000
+    FontColor #000000
+}
+
+title CD-XX — <Name>
+
+' ---------- Participants ----------
+' Only declare a class if it exists in src/ AND participates in this UC.
+
+class A {
+  + method1()
+  + method2(arg)
+}
+
+class B {
+  - field : Type
+  + doThing()
+}
+
+' ---------- Relationships ----------
+' -->  control dependency
+' ..>  factory / utility use
+' --|> inheritance
+' *--  composition
+' o--  aggregation
+
+A --> B
+
+@enduml

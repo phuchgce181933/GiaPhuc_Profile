@@ -1,0 +1,99 @@
+#!/usr/bin/env node
+/**
+ * .githooks/commit-msg
+ *
+ * ANTI-DRIFT ENFORCEMENT — commit-msg gate.
+ *
+ * Yêu cầu commit message phải chứa ít nhất 1 UC-NN reference
+ * (UC-01..UC-99). Format khuyến nghị:
+ *
+ *   UC-01: short description
+ *   UC-01, UC-02: short description
+ *
+ * Cho phép các commit KHÔNG phải code (docs, ci, chore) bằng cách
+ * dùng prefix hợp lệ:
+ *
+ *   docs: ...
+ *   chore: ...
+ *   ci: ...
+ *   test: ...
+ *   wip: ...      ← WIP = no UC required, nhưng sẽ bị review
+ *
+ * Exit codes:
+ *   0 — allow commit
+ *   1 — block commit (missing UC reference and not a doc/chore commit)
+ *   2 — skip (no hook input)
+ */
+
+const fs = require('fs');
+
+const MSG_PATH = process.argv[2];
+if (!MSG_PATH) {
+  console.error('⚠️ commit-msg hook expects files in path arg');
+  process.exit(2);
+}
+
+let content = '';
+try {
+  content = fs.readFileSync(MSG_PATH, 'utf8');
+} catch (e) {
+  console.error('⚠️ Could not read commit message file: ' + MSG_PATH);
+  process.exit(2);
+}
+
+const msg = content.trim();
+
+// ---- Skip rules (no UC required) ----
+const SKIP_PREFIXES = [
+  /^docs:/i,
+  /^chore:/i,
+  /^ci:/i,
+  /^test:/i,
+  /^wip:/i,
+  /^style:/i,
+  /^refactor:/i,           // pure refactor, no behavior change
+  /^merge:/i,
+  /^revert:/i,
+  /^init:/i,
+  /^WIP$/i,
+];
+
+const isSkippable = SKIP_PREFIXES.some(re => re.test(msg));
+
+// ---- UC reference required ----
+const UC_PATTERN = /\bUC-\d{2}\b/;
+const hasUcRef = UC_PATTERN.test(msg);
+
+// ---- Detect amend of previous commit ----
+// git commit --amend can preserve the message of the previous commit;
+// allow if so (we cannot easily detect, so just relax rule)
+const isMerge = /^Merge /i.test(msg);
+
+if (isMerge) {
+  console.log('✅ commit-msg: merge commit — skip UC check');
+  process.exit(0);
+}
+
+if (!isSkippable && !hasUcRef) {
+  console.error('\n❌ BLOCK — Commit message missing UC-NN reference\n');
+  console.error('Commit message:');
+  console.error('  ' + msg.split('\n')[0]);
+  console.error('');
+  console.error('📋 Required format:');
+  console.error('  UC-01: short description of change');
+  console.error('  UC-01, UC-02: short description');
+  console.error('');
+  console.error('Exempt prefixes (no UC required):');
+  console.error('  docs:, chore:, ci:, test:, wip:, style:, refactor:, merge:, revert:');
+  console.error('');
+  console.error('Reference: `.ai/skills/software-engineering/rules/01-source-of-truth.md`');
+  console.error('Bypass (last resort): git commit --no-verify\n');
+  process.exit(1);
+}
+
+if (hasUcRef) {
+  const refs = (msg.match(/UC-\d{2}/g) || []).join(', ');
+  console.log(`✅ commit-msg: UC reference(s) found: ${refs}`);
+}
+
+process.exit(0);

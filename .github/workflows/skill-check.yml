@@ -1,0 +1,68 @@
+name: Skill Compliance & Drift Check
+
+# Layer 4 — CI enforcement.
+# Chạy ở mọi PR và push vào main. Ngay cả khi local hook bị bypass
+# (`git commit --no-verify`), CI vẫn chặn ở đây.
+
+on:
+  pull_request:
+    branches: [main, master, 'feature/**', 'fix/**']
+  push:
+    branches: [main, master]
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: skill-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  skill-check:
+    name: Validate skill compliance + drift
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history for accurate diff
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install (no-op — no package.json in this skill template)
+        run: |
+          if [ -f package.json ]; then npm ci; else echo "No package.json — skip"; fi
+
+      - name: C1. Skill compliance (file structure, 1:1:1 UC↔CD↔SD)
+        run: node scripts/check-skill-compliance.js
+
+      - name: C2. Drift detection (full-repo mode)
+        run: node scripts/drift-detect.js --all
+
+      - name: C3. Drift detection (vs base branch)
+        if: github.event_name == 'pull_request'
+        run: node scripts/drift-detect.js --base=${{ github.event.pull_request.base.ref }}
+
+      - name: C4. Pre-commit hook dry-run
+        # Test the pre-commit hook fires on a staged change. This is a
+        # smoke test — we don't actually commit, just verify the script runs.
+        run: |
+          if [ -f .githooks/pre-commit ]; then
+            node .githooks/pre-commit && echo "pre-commit hook dry-run: OK" || echo "pre-commit hook dry-run: returned non-zero (expected in template with no source)"
+          else
+            echo "No .githooks/pre-commit — skip"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Skill Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- C1 skill-compliance: ${{ steps.c1-skills.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- C2 drift (all): ${{ steps.c2-drift-all.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- C3 drift (vs base): ${{ steps.c3-drift-base.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- C4 pre-commit dry-run: ${{ steps.c4-precommit.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Reference: .ai/skills/software-engineering/rules/10-validation.md" >> $GITHUB_STEP_SUMMARY

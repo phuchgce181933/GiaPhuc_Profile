@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeSubmitPrompt": [
+      {
+        "type": "prompt",
+        "prompt": "You are a reminder hook. Inject guidance ONLY when the prompt is about coding, feature, or documentation.\n\nIf the prompt is about code/feature/doc, respond with:\n\n\"Skill reminder: Follow 7-phase workflow (A=Discover → B=Impact Analysis → C=Implement → D=Test → E=Docs → F=UML → G=Validate). HARD RULES: (1) 1 UC = 1 CD + 1 SD, (2) Skip Phase = defect, (3) No invented class/endpoint/permission, (4) Phase G = hard gate, (5) Code WITHOUT doc = .githooks/pre-commit will BLOCK. Source-of-truth: source code > docs > AI assumption.\"\n\nIf the prompt is conversational or not about code, respond with empty string to allow without reminder.\n\nHook input: $ARGUMENTS",
+        "timeout": 8
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/post-edit-validate.js",
+        "timeout": 10,
+        "failClosed": false
+      }
+    ],
+    "stop": [
+      {
+        "type": "prompt",
+        "prompt": "AI just stopped. Before declaring the task done, the Implementation Summary (templates/implementation-summary.md) MUST be filled with all 10 sections. Also: code change MUST be paired with doc change (rules/10-validation.md + .githooks/pre-commit drift detector). If you skip docs, the next `git commit` will be blocked. Always reference a UC-NN id in any summary or response.",
+        "timeout": 8
+      }
+    ]
+  }
+}

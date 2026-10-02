@@ -1,0 +1,52 @@
+---
+description: Luôn đọc skill trước khi code — workflow 7 phase A–G bắt buộc
+alwaysApply: true
+---
+
+# Mandatory: Đọc Skill Trước Khi Code
+
+## BẮT BUỘC
+
+Mỗi khi nhận task liên quan đến code, feature, hoặc doc:
+
+1. **Đọc `AI-READING-GUIDE.md`** (`.ai/skills/software-engineering/AI-READING-GUIDE.md`) — bản đồ đọc nhanh theo task type.
+2. **Đọc `SKILL.md`** (`.ai/skills/software-engineering/SKILL.md`) §1 Workflow — 7 phase A–G theo thứ tự. **Skip phase = defect.**
+3. **Đọc `WORKFLOW.md`** (`.ai/skills/software-engineering/WORKFLOW.md`) Phase A và Phase B trước khi chạm code.
+
+## Phase A — Discover (BẮT BUỘC trước khi code)
+
+- Xác định UC id (hoặc ghi "cần UC mới")
+- Chạy `Grep`/`Glob` tìm file liên quan
+- **Output bắt buộc**: "What I found" + danh sách file đã inspect
+- **Pass criteria**: đặt được tên route, controller method, service method
+
+## Phase B — Change Impact Analysis (BẮT BUỘC trước khi edit)
+
+- Mở `rules/11-change-impact-analysis.md`
+- Điền 15-row matrix (Yes/No + file paths)
+- **Không edit file nào không có trong matrix Yes rows**
+- Reference `templates/change-classification.md` cho TYPE A–H
+
+## HARD RULES
+
+| Rule | Mô tả |
+| ---- | ----- |
+| HR-1 | 1 UC = 1 CD + 1 SD (`rules/03-use-case.md`) |
+| HR-2 | Skip Phase = defect |
+| HR-3 | Không bịa class/endpoint/permission |
+| HR-4 | UC = user goal, không phải button/field |
+| HR-5 | Phase G = hard gate |
+
+## Source-of-truth Priority
+
+```
+1. User requirement (explicit)
+2. Source code ← HIGHEST
+3. Tests
+4. docs/UC/UC-PACKAGE.md
+5. docs/plantuml/CD-*.puml
+6. docs/plantuml/SD-*.puml
+7. AI assumptions ← luôn re-check
+```
+
+Stop and report khi 1–6 không khớp. Không tự ý pick winner.

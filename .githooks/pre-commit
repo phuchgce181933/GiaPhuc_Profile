@@ -1,0 +1,160 @@
+#!/usr/bin/env node
+/**
+ * .githooks/pre-commit
+ *
+ * ANTI-DRIFT ENFORCEMENT — Layer 4 (mechanical, not reminder).
+ *
+ * Chạy khi `git commit` được invoke. Mục tiêu:
+ *   - Nếu staged files có CODE thay đổi (backend/src/**, frontend/src/**)
+ *     mà KHÔNG có DOC thay đổi (docs/UC/**, docs/plantuml/**,
+ *     .ai/skills/software-engineering/**, docs/BACKLOG.md) → BLOCK commit.
+ *   - Nếu có UC-PACKAGE đổi mà CODE không đổi → WARN (orphan doc).
+ *   - Nếu có PlantUML đổi mà CODE không đổi → WARN (orphan UML).
+ *
+ * Đây là cơ chế "không phụ thuộc AI nhớ" — vẫn chặn dù AI bỏ qua rule.
+ *
+ * Exit codes:
+ *   0 — allow commit
+ *   1 — block commit (drift detected)
+ *   2 — skip (pre-init state, no backend/src)
+ *
+ * Bypass (last resort):
+ *   git commit --no-verify
+ *   → sẽ bị CI gate chặn lại ở GitHub Actions.
+ */
+
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.resolve(__dirname, '..');
+
+// ---- Patterns ----
+const CODE_PATTERNS = [
+  /^backend\/src\//,
+  /^frontend\/src\//,
+  /^backend\/tests\//,                  // test changes count as code
+  /^backend\.json$/, /^frontend\.package\.json$/,  // dep bumps (rare)
+];
+
+const DOC_PATTERNS = [
+  /^docs\/UC\//,                       // UC-PACKAGE + UC docs
+  /^docs\/plantuml\//,                 // CD/SD
+  /^docs\/BACKLOG\.md$/,               // BACKLOG
+  /^docs\/tests\//,                    // test spec docs
+  /^\.ai\/skills\/software-engineering\//, // skill files
+  /^README\.md$/,
+];
+
+const SKIP_PATTERNS = [
+  /^\.githooks\//,
+  /^\.cursor\//,
+  /^\.github\//,
+  /^scripts\//,
+  /\.md$/,                             // root *.md = doc by default
+];
+
+// ---- Helpers ----
+function getStagedFiles() {
+  try {
+    const out = execSync('git diff --cached --name-only', { cwd: ROOT, encoding: 'utf8' });
+    return out.split('\n').map(s => s.trim()).filter(Boolean);
+  } catch (e) {
+    console.error('⚠️  Could not read staged files. Are you in a git working dir?');
+    process.exit(2);
+  }
+}
+
+function fileExists(p) {
+  try { return fs.existsSync(p); } catch (_) { return false; }
+}
+
+function classify(files, patterns) {
+  return files.filter(f => patterns.some(p => p.test(f)));
+}
+
+function findUnrelated(files) {
+  // Files that don't match any code or doc pattern — usually config, CI, tooling
+  return files.filter(f =>
+    !CODE_PATTERNS.some(p => p.test(f)) &&
+    !DOC_PATTERNS.some(p => p.test(f))
+  );
+}
+
+function extractUcIdsFromPaths(files) {
+  const re = /\bUC-(\d{2})\b/g;
+  const ids = new Set();
+  for (const f of files) {
+    let m;
+    while ((m = re.exec(f))) ids.add(`UC-${m[1]}`);
+  }
+  return [...ids].sort();
+}
+
+// ---- Main ----
+function main() {
+  // Skip if pre-init state
+  if (!fileExists(path.join(ROOT, 'backend/src')) && !fileExists(path.join(ROOT, 'frontend/src'))) {
+    console.log('⚠️  SKIP pre-commit: no backend/src or frontend/src (template skill)');
+    process.exit(0);
+  }
+
+  const staged = getStagedFiles();
+  if (staged.length === 0) {
+    process.exit(0);
+  }
+
+  const codeChanged = classify(staged, CODE_PATTERNS);
+  const docChanged = classify(staged, DOC_PATTERNS);
+  const unrelated = findUnrelated(staged);
+
+  console.log('\n=== Pre-commit: Anti-Drift Check ===\n');
+  console.log(`Staged files: ${staged.length}`);
+  console.log(`  Code files:  ${codeChanged.length}`);
+  console.log(`  Doc files:   ${docChanged.length}`);
+  console.log(`  Unrelated:   ${unrelated.length}`);
+
+  // ---- HARD CHECK: code without doc ----
+  if (codeChanged.length > 0 && docChanged.length === 0) {
+    console.error('\n❌ BLOCK — CODE CHANGED BUT NO DOC CHANGED\n');
+    console.error('This commit will not be allowed until documentation is in sync.\n');
+    console.error('Files changed:');
+    for (const f of codeChanged.slice(0, 20)) console.error('  • ' + f);
+    if (codeChanged.length > 20) console.error(`  … and ${codeChanged.length - 20} more`);
+
+    console.error('\n📋 Required actions (pick at least one):');
+    console.error('  1. Update `docs/UC/UC-PACKAGE.md` (or per-UC README) for affected UC');
+    console.error('  2. Update `docs/plantuml/SD-XX-*.puml` + `CD-XX-*.puml`');
+    console.error('  3. Update `docs/BACKLOG.md` (status row)');
+    console.error('  4. Or run `git commit --no-verify` — BYPASS, will be caught by CI');
+    console.error('\nReference: `.ai/skills/software-engineering/rules/10-validation.md`\n');
+    process.exit(1);
+  }
+
+  // ---- SOFT CHECK: orphan doc (doc without code) ----
+  if (docChanged.length > 0 && codeChanged.length === 0) {
+    const docsList = docChanged.filter(f => !SKIP_PATTERNS.some(p => p.test(f)));
+    if (docsList.length > 0) {
+      console.warn('\n⚠️  WARN — DOC CHANGED BUT NO CODE CHANGED\n');
+      console.warn('This may indicate orphan documentation. Review carefully:');
+      for (const f of docsList.slice(0, 20)) console.warn('  • ' + f);
+      console.warn('\nIf intentional (e.g. typo fix), proceed. Otherwise update code too.\n');
+      // Don't block — proceed with warning
+    }
+  }
+
+  // ---- UC traceability hint ----
+  const ucIds = extractUcIdsFromPaths(staged);
+  if (ucIds.length > 0) {
+    console.log(`\n📎 UC references found: ${ucIds.join(', ')}`);
+  } else if (codeChanged.length > 0) {
+    console.warn('\n⚠️  WARN — No UC-NN reference in changed file paths.');
+    console.warn('  Commit message MUST contain UC-NN (commit-msg hook will enforce).');
+  }
+
+  // ---- Summary ----
+  console.log('\n✅ Pre-commit anti-drift check passed.\n');
+  process.exit(0);
+}
+
+main();

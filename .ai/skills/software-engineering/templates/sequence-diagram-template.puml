@@ -1,0 +1,80 @@
+@startuml SD-XX-<Name>
+
+' ============================================================
+' Sequence Diagram — <Name>
+' Feature: <Admin Staff Account Management / RBAC / ...>
+' UC: UC-XX
+' ============================================================
+
+!pragma useStickyOnly true
+skinparam shadowing false
+skinparam padding 3
+skinparam linetype ortho
+
+skinparam sequence {
+    ActorFontSize 18
+    ParticipantFontSize 17
+    MessageFontSize 15
+    LifeLineStrategy nosolid
+    LifeLineBorderColor #000000
+    LifeLineBackgroundColor #FFFFFF
+    ArrowColor #000000
+    ActorBorderColor #000000
+    ParticipantBorderColor #000000
+    GroupBackgroundColor #FFFFFF
+    GroupBorderColor #000000
+}
+
+title SD-XX — <Name>
+
+actor "Actor" as A
+participant "React\n<PageName>" as Page
+participant "Axios API" as Axios
+participant "<Feature>Router" as Router
+participant "AuthMiddleware" as AuthMw
+participant "PermissionMiddleware\n(<PERM>)" as PermMw
+participant "ValidateMiddleware\n(<schema>)" as ValMw
+participant "<Feature>Controller" as Ctrl
+participant "<Feature>Service" as Svc
+participant "<Repo>" as Repo
+database "MongoDB" as DB
+
+== <Phase name> ==
+A -> Page : <UI action>
+Page -> Axios : <METHOD> <path>
+Axios -> Router : HTTP <METHOD>
+
+== AuthN ==
+Router -> AuthMw : authenticate()
+AuthMw -> DB : findById(decoded.sub) + populate role.permissions
+DB --> AuthMw : User
+AuthMw --> Router : req.user attached
+
+== AuthZ ==
+Router -> PermMw : requirePermission('<PERM>')
+alt role has <PERM>
+  PermMw --> Router : next()
+else missing
+  PermMw --> Axios : 403 Forbidden
+  Axios --> Page : toast.error
+end
+
+== Validation ==
+Router -> ValMw : validate(<schema>)
+alt valid
+  ValMw --> Ctrl : req.body
+else invalid
+  ValMw --> Axios : 400 Bad Request
+  Axios --> Page : show error
+end
+
+Ctrl -> Svc : <method>(<args>)
+Svc -> Repo : <repoMethod>(<args>)
+Repo -> DB : <dbOp>
+DB --> Repo : <result>
+Repo --> Svc : <domain object>
+Svc --> Ctrl : <return>
+Ctrl --> Axios : <status> {envelope}
+Axios --> Page : response
+
+@enduml
